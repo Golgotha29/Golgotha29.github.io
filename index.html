@@ -1,0 +1,408 @@
+
+<html>
+    <head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+
+</head>
+<body>
+    <audio loop="loop" autoplay="autoplay">
+        <source src="http://iloveyou.alwaysdata.net/BELIEF_M-Bernhard-1482_hifi.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="audio">
+        <source src="http://downloads.flashkit.com/soundfx/Interfaces/Bloops/hollow_p-dog-7588/hollow_p-dog-7588_hifi.mp3" type="audio/mpeg">
+    </audio>
+<script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+
+<script type="application/x-javascript">
+var timer;  
+var boss;
+var bulle = {};
+var joueur;
+var tab_bulle = [];
+var canvas;
+var context;
+var win_w = 1200;
+var win_h = 500;
+var leftkey = false;
+var upkey = false;
+var rightkey = false;
+var downkey = false;
+var centerX = 288;
+var centerY = 100;
+var radius = 70;
+var poids = 20;
+
+function move_bulle(b, d) {
+
+    // vitesse
+    v = 10;
+    // pourcentage de perte
+    p = 5;
+	
+	var t = Math.round(b.taille * p / 100);
+	
+    switch (d) {
+
+    case 1:
+        buble = create_bulle();
+        buble.x = b.x + b.taille;
+        buble.y = b.y;
+        buble.direction = 0;
+        buble.taille = t;
+        b.taille = b.taille - Math.round(b.taille * p / 100);
+        b.direction = 2;
+        break;
+    case 2:
+        buble = create_bulle();
+        buble.x = b.x;
+        buble.y = b.y + b.taille;
+        buble.direction = 1;
+        buble.taille = t;
+        b.taille = b.taille - Math.round(b.taille * p / 100);
+        b.direction = 3;
+        break;
+    case 3:
+        buble = create_bulle();
+        buble.x = b.x - b.taille;
+        buble.y = b.y;
+        buble.direction = 2;
+        buble.taille = t;
+        b.taille = b.taille - Math.round(b.taille * p / 100);
+        b.direction = 0;
+        break;
+    case 4:
+        buble = create_bulle();
+        buble.x = b.x;
+        buble.y = b.y - b.taille;
+        buble.direction = 3;
+        buble.taille = t;
+        b.taille = b.taille - Math.round(b.taille * p / 100);
+        b.direction = 1;
+        break;
+
+    }
+	buble.taille >= 1 ? tab_bulle.push(buble) : buble = null;
+
+}
+
+function anime_joueur(b) {
+
+    var pas = 3;
+    switch (b.direction) {
+        // EST -->
+    case 0:
+        if (b.x < win_w - b.taille - pas) b.x = b.x + pas;
+        else b.direction = 2;
+        break;
+        // SUD
+    case 1:
+        if (b.y < win_h - b.taille - pas) b.y = b.y + pas;
+        else b.direction = 3;
+        break;
+        // OUEST
+    case 2:
+        if (b.x > 0 + b.taille + pas) b.x = b.x - pas;
+        else b.direction = 0;
+        break;
+        // NORD
+    case 3:
+        if (b.y > 0 + b.taille + pas) b.y = b.y - pas;
+        else b.direction = 1;
+        break;
+
+    }
+
+}
+
+function create_bulle(t_max, x_min, x_max, y_max) {
+    var b = {};
+    var randomnumber = Math.floor(Math.random() * t_max) + 1;
+    b.taille = randomnumber;
+    var randomnumber = Math.floor(Math.random() * x_max - t_max) + x_min
+    b.x = randomnumber;
+    var randomnumber = Math.floor(Math.random() * y_max - t_max) + t_max
+    b.y = randomnumber;
+
+    var randomnumber = Math.floor(Math.random() * 30);
+    b.nb_pas_fait = 0;
+    b.nb_pas = randomnumber;
+    var randomnumber = Math.floor(Math.random() * 3);
+    b.direction = randomnumber;
+	b.v = 0.6;
+	b.is_boss = false;
+	
+    return b;
+}
+
+function collision(b) {
+
+    for (i = 0; i < tab_bulle.length; i++) {
+        d = Math.sqrt(Math.pow((tab_bulle[i].x - b.x), 2) + Math.pow((tab_bulle[i].y - b.y), 2));
+        eq = tab_bulle[i].taille + b.taille;
+
+
+        if (d < eq && d != 0) {
+            return i;
+        }
+
+    }
+    return -1;
+}
+
+function traite_collision() {
+    var i;
+	var d = 0.8
+    for (i = 0; i < tab_bulle.length; i++) {
+        c = collision(tab_bulle[i]);
+        if (c > -1) {
+		//var audioElement = document.createElement('audio');
+		//audioElement.play();
+            if (tab_bulle[c].taille > tab_bulle[i].taille) {
+				tab_bulle[c].taille = tab_bulle[c].taille + d;
+				tab_bulle[i].taille = tab_bulle[i].taille - d ;
+				if (tab_bulle[i].taille <= 0)
+					tab_bulle.splice(i, 1);
+            } else {
+				tab_bulle[c].taille = tab_bulle[c].taille - d;
+				tab_bulle[i].taille = tab_bulle[i].taille + d ;
+				if (tab_bulle[c].taille <= 0)
+					tab_bulle.splice(c, 1);
+            }
+        }
+    }
+	
+	    c = collision(joueur);
+        if (c > -1) {
+            if (tab_bulle[c].taille > joueur.taille) {
+				if (joueur.taille > 0){
+					tab_bulle[c].taille = tab_bulle[c].taille + d*2;
+					joueur.taille =  joueur.taille - d*2;
+				}
+
+            } else {
+				tab_bulle[c].taille = tab_bulle[c].taille - d*2;
+				joueur.taille =  joueur.taille + d*2;
+				if (tab_bulle[c].taille <= 0)
+					tab_bulle.splice(c, 1);
+            }
+        }
+}
+
+function affiche_bulle(b, c) {
+	
+	if (b.taille > 0){
+    context.beginPath();
+    context.arc(b.x, b.y, b.taille, 0, 2 * Math.PI, false);
+
+    context.fillStyle = c;
+    context.fill();
+    context.lineWidth = 3;
+	if (c == "black"){
+	if (b.taille < joueur.taille)
+    context.strokeStyle = "blue";
+	else
+	context.strokeStyle = "red";
+	}else context.strokeStyle = "black";
+	
+    context.stroke();
+	}
+
+}
+
+function anime_bulle(b) {
+
+    if (b.nb_pas_fait > b.nb_pas) {
+        // on lui donne un nouveau nombre de pas a faire
+        // et une direction
+        var randomnumber = Math.floor(Math.random() * 300) + 10;
+        b.nb_pas_fait = 0;
+        b.nb_pas = randomnumber;
+        var randomnumber = Math.floor(Math.random() * 7);
+        b.direction = randomnumber;
+
+    }
+
+    b.nb_pas_fait = b.nb_pas_fait + 1;
+    var pas = b.v;
+    switch (b.direction) {
+        // EST -->
+    case 0:
+        if (b.x < win_w - b.taille - pas) b.x = b.x + pas;
+        else b.direction = 2;
+        break;
+        // SUD
+    case 1:
+        if (b.y < win_h - b.taille - pas) b.y = b.y + pas;
+        else b.direction = 3;
+        break;
+        // OUEST
+    case 2:
+        if (b.x > 0 + b.taille + pas) b.x = b.x - pas;
+        else b.direction = 0;
+        break;
+        // NORD
+    case 3:
+        if (b.y > 0 + b.taille + pas) b.y = b.y - pas;
+        else b.direction = 1;
+        break;
+        // SUD EST
+    case 4:
+        if ((b.x < win_w - b.taille - pas) && (b.y < win_h - b.taille - pas)) {
+            b.x = b.x + pas;
+            b.y = b.y + pas;
+        } else b.direction = 2;
+        break;
+        // SUD OUEST
+    case 5:
+        if ((b.y < win_h - b.taille - pas) && (b.x > 0 + b.taille + pas)) {
+            b.y = b.y + pas;
+            b.x = b.x - pas;
+        } else b.direction = 3;
+        break;
+        // NORD OUEST
+    case 6:
+        if ((b.x > 0 + b.taille + pas) && (b.y > 0 + b.taille + pas)) {
+            b.x = b.x - pas;
+            b.y = b.y - pas;
+        } else b.direction = 0;
+        break;
+        // NORD EST
+    case 7:
+        if ((b.y > 0 + b.taille + pas) && (b.x < win_w - b.taille - pas)) {
+            b.y = b.y - pas;
+            b.x = b.x + pas;
+        } else b.direction = 1;
+        break;
+
+    }
+
+
+
+}
+
+$(document).keydown(onKeyDown);
+$(document).keyup(onKeyUp);
+
+//set rightDown or leftDown if the right or left keys are down
+
+function onKeyDown(evt) {
+    if (evt.keyCode == 37) leftkey = true;
+    else if (evt.keyCode == 38) upkey = true;
+    else if (evt.keyCode == 39) rightkey = true;
+    else if (evt.keyCode == 40) downkey = true;
+}
+
+//and unset them when the right or left key is released
+
+function onKeyUp(evt) {
+    if (evt.keyCode == 37) leftkey = false;
+    else if (evt.keyCode == 38) upkey = false;
+    else if (evt.keyCode == 39) rightkey = false;
+    else if (evt.keyCode == 40) downkey = false;
+}
+
+function clear() {
+    context.clearRect(0, 0, win_w, win_h);
+}
+
+function draw() {
+
+    canvas = document.getElementById("canvas");
+    canvas.style.border = "green 2px solid";
+    context = canvas.getContext("2d");
+    clear();
+
+    for (i = 0; i < tab_bulle.length; i++) {
+		
+		if (!tab_bulle[i].is_boss){
+        if (tab_bulle[i].taille > joueur.taille) affiche_bulle(tab_bulle[i], "red");
+        else affiche_bulle(tab_bulle[i], "green");
+		}else affiche_bulle(tab_bulle[i], "black");
+		
+        anime_bulle(tab_bulle[i]);
+
+    }
+
+    traite_collision();
+	
+
+    if (leftkey) move_bulle(joueur, 1);
+    if (upkey) move_bulle(joueur, 2);
+    if (rightkey) move_bulle(joueur, 3);
+    if (downkey) move_bulle(joueur, 4);
+
+    anime_joueur(joueur);
+    affiche_bulle(joueur, "blue");
+	
+	
+	if (boss.taille <= 0 || boss == null) {
+        ecrire("You win !","black");
+		clearInterval(timer);
+    }
+    
+    if ( joueur.taille <= 0) {
+		ecrire("You lose !","black");
+		tab_bulle.splice(0,tab_bulle.length);
+		clearInterval(timer);
+    }
+	
+}
+
+function ecrire(texte, color){
+	//clear();
+	x = 200;
+	y = 200;
+	context.font = "60pt Impact";
+	context.lineWidth = 3;
+	context.strokeStyle = color; // stroke color
+	context.strokeText(texte, x, y);	
+	
+	
+}
+
+window.onload = function () {
+
+	boss = create_bulle(20, win_w - (win_w*90/100) ,win_w - (win_w*90/100) ,win_h);
+	boss.taille = 50;
+	boss.x = 1000;
+	boss.y = 250;
+	boss.direction = 1;
+	boss.v = 0.2;
+	boss.is_boss = true;
+	
+	tab_bulle.push(boss);
+
+    joueur = create_bulle(20, win_w - (win_w*90/100) ,win_w - (win_w*90/100) ,win_h);
+	joueur.taille = 20;
+	joueur.x = 100;
+	joueur.y = 250;
+	joueur.direction = 10;
+	
+    for (i = 0; i < 20; i++) {
+        b = create_bulle(8, win_w - (win_w*100/100) ,win_w - (win_w*60/100) ,win_h);
+        tab_bulle.push(b);
+    }
+	for (i = 0; i < 15; i++) {
+        b = create_bulle(10, win_w - (win_w*60/100) ,win_w - (win_w*30/100) ,win_h);
+        tab_bulle.push(b);
+    }
+	for (i = 0; i < 5; i++) {
+        b = create_bulle(20, win_w - (win_w*30/100) , win_w  ,win_h);
+        tab_bulle.push(b);
+    }
+	for (i = 0; i < 7; i++) {
+        b = create_bulle(30, win_w - (win_w*70/100) , win_w - (win_w*20/100)  ,win_h);
+        tab_bulle.push(b);
+    }
+
+    timer = setInterval(draw, 50)
+};
+
+  </script>
+ 
+ 
+	
+   <canvas id="canvas" width="1200" height="500" border="red 1px solid" style="border: 2px solid green;"></canvas><br>
+   Jeu crée dans le cadre du 
+   <a href="http://www.developpez.net/forums/d1142049/applications/developpement-2d-3d-jeux/evenement-04-06-novembre-developper-jeu-weekend-chat-developpez-com/">week-end jeu-video sur develeoppez.net</a> par cédric salaun.<br>
+ 
+</body></html>
